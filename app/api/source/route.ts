@@ -19,16 +19,20 @@ export async function GET(request: NextRequest) {
   const provider = anilistId ? 'ani' : 'mal'
   const id = anilistId || malId
   const upstream = `${SOURCE_ORIGIN}/${provider}/${id}/${episode}`
+  console.log('[v0] source request', { provider, id, episode, upstream })
 
   try {
     const response = await fetch(upstream, {
       headers: { Referer: REFERER, Origin: REFERER, Accept: 'application/json' },
       next: { revalidate: 60 },
     })
+    console.log('[v0] source upstream response', { status: response.status, ok: response.ok })
     if (!response.ok) return NextResponse.json({ error: 'Upstream source unavailable.' }, { status: 502 })
     const payload = await response.json()
+    console.log('[v0] source payload', { sourceCount: Array.isArray(payload?.sources) ? payload.sources.length : 0, sources: payload?.sources?.map((source: { url?: string; file?: string; quality?: string | number }) => ({ url: source.url || source.file, quality: source.quality })) })
     return NextResponse.json(payload, { headers: { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300', 'Access-Control-Allow-Origin': '*' } })
-  } catch {
+  } catch (error) {
+    console.error('[v0] source request failed', error)
     return NextResponse.json({ error: 'Unable to resolve media sources.' }, { status: 502 })
   }
 }

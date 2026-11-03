@@ -23,13 +23,18 @@ export default function EmbedPage() {
     const query = new URLSearchParams()
     query.set(params.get('anilistId') ? 'anilistId' : 'malId', id)
     query.set('episode', episode)
+    console.log('[v0] embed source lookup', { id, episode, provider: params.get('anilistId') ? 'anilist' : 'mal' })
     fetch(`/api/source?${query}`)
       .then(async (response) => {
         const body = await response.json()
+        console.log('[v0] embed source response', { status: response.status, ok: response.ok, sourceCount: body.sources?.length || 0 })
         if (!response.ok) throw new Error(body.error || 'Unable to load media')
         setPayload(body)
       })
-      .catch((reason) => setError(reason instanceof Error ? reason.message : 'Unable to load media'))
+      .catch((reason) => {
+        console.error('[v0] embed source lookup failed', reason)
+        setError(reason instanceof Error ? reason.message : 'Unable to load media')
+      })
   }, [id, episode, params])
 
   const sources = payload?.sources || []
@@ -39,15 +44,33 @@ export default function EmbedPage() {
   useEffect(() => {
     const video = videoRef.current
     if (!video || !videoUrl) return
+    console.log('[v0] video source selected', { url: videoUrl, nativeHls: Boolean(video.canPlayType('application/vnd.apple.mpegurl')), hlsSupported: Hls.isSupported() })
+    const onVideoError = () => console.error('[v0] video error', video.error)
+    video.addEventListener('error', onVideoError)
     if (video.canPlayType('application/vnd.apple.mpegurl')) {
       video.src = videoUrl
-      return
+      video.addEventListener('loadedmetadata', () => console.log('[v0] native HLS metadata loaded'))
+      return () => {
+        video.removeEventListener('error', onVideoError)
+        video.removeAttribute('src')
+      }
     }
-    if (!Hls.isSupported()) return
+    if (!Hls.isSupported()) {
+      console.error('[v0] HLS is not supported in this browser')
+      return () => video.removeEventListener('error', onVideoError)
+    }
     const hls = new Hls({ enableWorker: true })
+    hls.on(Hls.Events.MANIFEST_LOADING, (_event, data) => console.log('[v0] HLS manifest loading', data.url))
+    hls.on(Hls.Events.MANIFEST_PARSED, (_event, data) => console.log('[v0] HLS manifest parsed', { levels: data.levels.length }))
+    hls.on(Hls.Events.ERROR, (_event, data) => console.error('[v0] HLS error', { type: data.type, details: data.details, fatal: data.fatal, url: data.url }))
+    video.addEventListener('loadedmetadata', () => console.log('[v0] HLS metadata loaded'))
+    video.addEventListener('canplay', () => console.log('[v0] video can play'))
     hls.loadSource(videoUrl)
     hls.attachMedia(video)
-    return () => hls.destroy()
+    return () => {
+      video.removeEventListener('error', onVideoError)
+      hls.destroy()
+    }
   }, [videoUrl])
 
   if (error) return <main className="embed-error"><strong>Stream unavailable</strong><span>{error}</span></main>
