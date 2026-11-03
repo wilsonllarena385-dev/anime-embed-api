@@ -18,9 +18,30 @@ export default function Page() {
   const [copied, setCopied] = useState(false)
   const [activeSource, setActiveSource] = useState(0)
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [response, setResponse] = useState<any>(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
 
   const endpoint = useMemo(() => `/api/embed?${idType}=${id || '154587'}&episode=${episode || '1'}`, [idType, id, episode])
   const fullEndpoint = `https://your-domain.com${endpoint}`
+
+  async function runRequest() {
+    setLoading(true)
+    setError('')
+    try {
+      const result = await fetch(endpoint).then(async r => {
+        const body = await r.json()
+        if (!r.ok) throw new Error(body.error || 'Request failed')
+        return body
+      })
+      setResponse(result)
+      document.getElementById('response')?.scrollIntoView({ behavior: 'smooth' })
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to load sources')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   function copyEndpoint() {
     navigator.clipboard?.writeText(fullEndpoint)
@@ -55,7 +76,7 @@ export default function Page() {
               <div className="segmented"><button className={idType === 'anilistId' ? 'selected' : ''} onClick={() => setIdType('anilistId')}><Globe2 size={15} /> AniList ID</button><button className={idType === 'malId' ? 'selected' : ''} onClick={() => setIdType('malId')}><Layers3 size={15} /> MAL ID</button></div>
               <div className="input-grid"><div><label htmlFor="id">{idType === 'anilistId' ? 'ANILIST ID' : 'MAL ID'}</label><input id="id" value={id} onChange={e => setId(e.target.value)} inputMode="numeric" /></div><div><label htmlFor="episode">EPISODE</label><input id="episode" value={episode} onChange={e => setEpisode(e.target.value)} inputMode="numeric" /></div></div>
               <div className="url-preview"><span className="method">GET</span><code>{endpoint}</code><button onClick={copyEndpoint} aria-label="Copy endpoint">{copied ? <Check size={16} /> : <Copy size={16} />}</button></div>
-              <button className="run-button" onClick={() => document.getElementById('response')?.scrollIntoView({ behavior: 'smooth' })}><Play size={15} fill="currentColor" /> Run request</button>
+              <button className="run-button" onClick={runRequest} disabled={loading}><Play size={15} fill="currentColor" /> {loading ? 'Loading sources…' : 'Run request'}</button>{error && <p className="error-note" role="alert">{error}</p>}
             </div>
             <div className="request-note"><CircleHelp size={14} /><span>Requests are proxied with the <code>https://yenime.net</code> referer automatically.</span></div>
           </div>
@@ -71,8 +92,8 @@ export default function Page() {
       <section className="player-section" id="player">
         <div className="section-label"><span>02</span> EMBED PLAYER</div>
         <div className="player-layout">
-          <div className="video-card"><div className="video-screen"><div className="video-noise" /><div className="video-center"><div className="play-circle"><Play size={23} fill="currentColor" /></div><span>Preview player</span><small>Run a request to load media</small></div><div className="video-topline"><span className="now-playing"><span className="red-dot" /> READY TO PLAY</span><span>1080p · SUB</span></div><div className="video-controls"><span>0:00</span><div className="progress"><i /></div><span>24:18</span><span className="control-spacer" /><span>CC</span><span>⚙</span><span>⛶</span></div></div><div className="player-caption"><div><b>Episode {episode || '1'}</b><span> · ID {id || '154587'}</span></div><span className="caption-chip"><ShieldCheck size={12} /> Referer handled</span></div></div>
-          <aside className="source-panel"><div className="source-header"><div><h3>Sources</h3><p>Choose a stream</p></div><span className="source-count">{sampleSources.length}</span></div><div className="source-list">{sampleSources.map((source, index) => <button key={source.audio + source.quality} className={activeSource === index ? 'source-row active' : 'source-row'} onClick={() => setActiveSource(index)}><span className="radio">{activeSource === index && <i />}</span><span className="source-info"><b>{source.quality}</b><span>{source.audio}</span></span><span className="source-type">{source.type}</span></button>)}</div><div className="subtitle-head"><h3>Subtitles</h3><ChevronDown size={15} /></div><div className="track-list">{sampleTracks.map((track, index) => <span key={track} className={index === 0 ? 'track active' : 'track'}>{track}{index === 0 && <Check size={12} />}</span>)}</div></aside>
+          <div className="video-card"><div className="video-screen">{response?.sources?.[activeSource]?.url ? <video className="live-video" controls playsInline poster={response.image}><source src={response.sources[activeSource].url} type="application/x-mpegURL" />Your browser does not support HLS playback.</video> : <><div className="video-noise" /><div className="video-center"><div className="play-circle"><Play size={23} fill="currentColor" /></div><span>Preview player</span><small>Run a request to load media</small></div></>}<div className="video-topline"><span className="now-playing"><span className="red-dot" /> READY TO PLAY</span><span>1080p · SUB</span></div><div className="video-controls"><span>0:00</span><div className="progress"><i /></div><span>24:18</span><span className="control-spacer" /><span>CC</span><span>⚙</span><span>⛶</span></div></div><div className="player-caption"><div><b>Episode {episode || '1'}</b><span> · ID {id || '154587'}</span></div><span className="caption-chip"><ShieldCheck size={12} /> Referer handled</span></div></div>
+          <aside className="source-panel"><div className="source-header"><div><h3>Sources</h3><p>Choose a stream</p></div><span className="source-count">{response?.sources?.length || sampleSources.length}</span></div><div className="source-list">{(response?.sources || sampleSources).map((source: any, index: number) => <button key={source.audio + source.quality} className={activeSource === index ? 'source-row active' : 'source-row'} onClick={() => setActiveSource(index)}><span className="radio">{activeSource === index && <i />}</span><span className="source-info"><b>{source.quality}p</b><span>{source.dub || source.audio}</span></span><span className="source-type">{(source.audio || source.type).toUpperCase()}</span></button>)}</div><div className="subtitle-head"><h3>Subtitles</h3><ChevronDown size={15} /></div><div className="track-list">{(response?.sources?.[activeSource]?.tracks || sampleTracks.map(label => ({ label }))).map((track: any, index: number) => <span key={track.label || track} className={index === 0 ? 'track active' : 'track'}>{track.label || track}{index === 0 && <Check size={12} />}</span>)}</div></aside>
         </div>
       </section>
 

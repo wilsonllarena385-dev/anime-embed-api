@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 const SOURCE_ORIGIN = 'https://player.yenime.net/anime-src'
-const REFERER = 'https://yenime.net/'
+const REFERER = 'https://yenime.net'
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
