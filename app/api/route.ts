@@ -1,1 +1,1 @@
-export { GET } from './embed/route'
+export { GET } from './source/route'
