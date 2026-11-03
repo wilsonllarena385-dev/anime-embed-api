@@ -92,18 +92,20 @@ export default function EmbedPage() {
       <div className="embed-player">
         <div className="embed-video-wrap">
           <video key={videoUrl} ref={videoRef} autoPlay playsInline poster={payload?.image} onClick={() => { const video = videoRef.current; if (!video) return; video.paused ? video.play() : video.pause() }} onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)} onTimeUpdate={(event) => setCurrentTime(event.currentTarget.currentTime)} onLoadedMetadata={(event) => setDuration(event.currentTarget.duration)} />
+          <div className="embed-title-overlay"><strong>{payload?.title || 'Now playing'}</strong><span>Episode {episode}</span></div>
           <div className="embed-controls" aria-label="Player controls">
             <span className="embed-time">{formatTime(currentTime)}</span>
             <input className="embed-progress" type="range" min="0" max={duration || 0} step="0.1" value={Math.min(currentTime, duration || 0)} onChange={(event) => { const next = Number(event.target.value); setCurrentTime(next); if (videoRef.current) videoRef.current.currentTime = next }} aria-label="Seek video" />
             <span className="embed-time">{formatTime(duration)}</span>
-            <button className="embed-control-button" type="button" onClick={() => { const video = videoRef.current; if (video) video.muted = !video.muted }} aria-label="Toggle mute">CC</button>
+            <div className="embed-language-controls" aria-label="Audio language">
+              {sources.map((item, index) => <button key={`${item.url || item.file}-${index}`} className={index === active ? 'active' : ''} type="button" onClick={() => setActive(index)}>{item.dub || item.audio || item.type || 'SUB'}</button>)}
+            </div>
+            <button className="embed-control-button" type="button" onClick={() => { const video = videoRef.current; if (video) video.muted = !video.muted }} aria-label="Toggle captions">CC</button>
             <button className="embed-control-button" type="button" onClick={() => { const video = videoRef.current; if (!video) return; video.paused ? video.play() : video.pause() }} aria-label={playing ? 'Pause' : 'Play'}>{playing ? '||' : '▶'}</button>
             <button className="embed-control-button" type="button" onClick={() => videoRef.current?.requestFullscreen()} aria-label="Fullscreen">↗</button>
           </div>
         </div>
-        <div className="embed-meta"><span>{payload?.title || `Episode ${episode}`}</span><span>{source?.quality ? `${source.quality}p` : 'HLS'} · {source?.dub || source?.audio || 'SUB'}</span></div>
       </div>
-      {sources.length > 1 && <div className="embed-sources" aria-label="Stream sources">{sources.map((item, index) => <button key={`${item.url || item.file}-${index}`} className={index === active ? 'active' : ''} onClick={() => setActive(index)}>{item.quality ? `${item.quality}p` : 'Source'} · {item.dub || item.audio || item.type || 'HLS'}</button>)}</div>}
     </main>
   )
 }
