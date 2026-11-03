@@ -39,7 +39,8 @@ export default function EmbedPage() {
 
   const sources = payload?.sources || []
   const source = sources[active]
-  const videoUrl = source?.url || source?.file
+  const sourceUrl = source?.url || source?.file
+  const videoUrl = sourceUrl ? `/api/hls?url=${encodeURIComponent(sourceUrl)}` : ''
 
   useEffect(() => {
     const video = videoRef.current
