@@ -11,10 +11,6 @@ const sampleSources = [
 
 const sampleTracks = ['English', 'Arabic', 'French', 'German', 'Italian', 'Portuguese (Brazil)', 'Spanish']
 
-function proxyHlsUrl(url?: string) {
-  return url ? `/api/hls?url=${encodeURIComponent(url)}` : ''
-}
-
 export default function Page() {
   const [idType, setIdType] = useState<'anilistId' | 'malId'>('anilistId')
   const [id, setId] = useState('154587')
@@ -88,7 +84,7 @@ export default function Page() {
           <div className="panel response-panel" id="response">
             <div className="panel-heading response-heading"><div><h2>Response preview</h2><p>What your client receives from the endpoint.</p></div><span className="live-badge"><span /> 200 OK</span></div>
             <div className="code-window"><div className="code-top"><span><i /><i /><i /></span><span className="json-label">application/json</span></div><pre><span className="syntax-brace">{'{'}</span>{'\n'}  <span className="syntax-key">&quot;sources&quot;</span>: [<span className="syntax-brace">{'{'}</span>{'\n'}    <span className="syntax-key">&quot;url&quot;</span>: <span className="syntax-string">&quot;https://.../master.m3u8&quot;</span>,{'\n'}    <span className="syntax-key">&quot;type&quot;</span>: <span className="syntax-string">&quot;hls&quot;</span>,{'\n'}    <span className="syntax-key">&quot;quality&quot;</span>: <span className="syntax-number">1080</span>,{'\n'}    <span className="syntax-key">&quot;audio&quot;</span>: <span className="syntax-string">&quot;japanese&quot;</span>,{'\n'}    <span className="syntax-key">&quot;tracks&quot;</span>: [<span className="syntax-string">&quot;English&quot;</span>, <span className="syntax-string">&quot;Arabic&quot;</span>]{'\n'}  <span className="syntax-brace">{' }'}</span>],{'\n'}  <span className="syntax-key">&quot;intro&quot;</span>: <span className="syntax-brace">{'{'}</span> <span className="syntax-key">&quot;start&quot;</span>: <span className="syntax-number">0</span>, <span className="syntax-key">&quot;end&quot;</span>: <span className="syntax-number">89</span> <span className="syntax-brace">{' }'}</span>,{'\n'}  <span className="syntax-key">&quot;outro&quot;</span>: <span className="syntax-brace">{'{'}</span> <span className="syntax-key">&quot;start&quot;</span>: <span className="syntax-number">1460</span>, <span className="syntax-key">&quot;end&quot;</span>: <span className="syntax-number">1549</span> <span className="syntax-brace">{' }'}</span>{'\n'}<span className="syntax-brace">{'  }'}</span></pre></div>
-            <div className="response-embed-preview">{proxyHlsUrl(response?.sources?.[activeSource]?.url || response?.sources?.[activeSource]?.file) ? <video controls playsInline src={response.sources[activeSource].url || response.sources[activeSource].file} /> : <div className="response-embed-empty"><Play size={18} /><span>Run a request to load the embed player</span></div>}</div>
+            <div className="response-embed-preview">{response ? <iframe title="Streamkit embed player" src={`/api/embed?${idType}=${encodeURIComponent(id || '154587')}&episode=${encodeURIComponent(episode || '1')}`} allow="autoplay; fullscreen; picture-in-picture" /> : <div className="response-embed-empty"><Play size={18} /><span>Run a request to load the embed player</span></div>}</div>
             <div className="response-footer"><span><Sparkles size={14} /> <b>tookMs</b> 142</span><span>Updated just now</span></div>
           </div>
         </div>
