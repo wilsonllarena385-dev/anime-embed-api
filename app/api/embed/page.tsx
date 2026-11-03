@@ -6,10 +6,20 @@ import Hls from 'hls.js'
 type Source = { url?: string; file?: string; quality?: string | number; audio?: string; dub?: string; type?: string }
 type Payload = { sources?: Source[]; image?: string; title?: string; error?: string }
 
+function formatTime(value: number) {
+  if (!Number.isFinite(value)) return '0:00'
+  const minutes = Math.floor(value / 60)
+  const seconds = Math.floor(value % 60).toString().padStart(2, '0')
+  return `${minutes}:${seconds}`
+}
+
 export default function EmbedPage() {
   const [payload, setPayload] = useState<Payload | null>(null)
   const [error, setError] = useState('')
   const [active, setActive] = useState(0)
+  const [playing, setPlaying] = useState(false)
+  const [currentTime, setCurrentTime] = useState(0)
+  const [duration, setDuration] = useState(0)
   const videoRef = useRef<HTMLVideoElement>(null)
   const params = useMemo(() => typeof window === 'undefined' ? new URLSearchParams() : new URLSearchParams(window.location.search), [])
   const id = params.get('anilistId') || params.get('malId')
@@ -80,7 +90,17 @@ export default function EmbedPage() {
   return (
     <main className="embed-shell">
       <div className="embed-player">
-        <video key={videoUrl} ref={videoRef} controls autoPlay playsInline poster={payload?.image} />
+        <div className="embed-video-wrap">
+          <video key={videoUrl} ref={videoRef} autoPlay playsInline poster={payload?.image} onClick={() => { const video = videoRef.current; if (!video) return; video.paused ? video.play() : video.pause() }} onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)} onTimeUpdate={(event) => setCurrentTime(event.currentTarget.currentTime)} onLoadedMetadata={(event) => setDuration(event.currentTarget.duration)} />
+          <div className="embed-controls" aria-label="Player controls">
+            <span className="embed-time">{formatTime(currentTime)}</span>
+            <input className="embed-progress" type="range" min="0" max={duration || 0} step="0.1" value={Math.min(currentTime, duration || 0)} onChange={(event) => { const next = Number(event.target.value); setCurrentTime(next); if (videoRef.current) videoRef.current.currentTime = next }} aria-label="Seek video" />
+            <span className="embed-time">{formatTime(duration)}</span>
+            <button className="embed-control-button" type="button" onClick={() => { const video = videoRef.current; if (video) video.muted = !video.muted }} aria-label="Toggle mute">CC</button>
+            <button className="embed-control-button" type="button" onClick={() => { const video = videoRef.current; if (!video) return; video.paused ? video.play() : video.pause() }} aria-label={playing ? 'Pause' : 'Play'}>{playing ? '||' : '▶'}</button>
+            <button className="embed-control-button" type="button" onClick={() => videoRef.current?.requestFullscreen()} aria-label="Fullscreen">↗</button>
+          </div>
+        </div>
         <div className="embed-meta"><span>{payload?.title || `Episode ${episode}`}</span><span>{source?.quality ? `${source.quality}p` : 'HLS'} · {source?.dub || source?.audio || 'SUB'}</span></div>
       </div>
       {sources.length > 1 && <div className="embed-sources" aria-label="Stream sources">{sources.map((item, index) => <button key={`${item.url || item.file}-${index}`} className={index === active ? 'active' : ''} onClick={() => setActive(index)}>{item.quality ? `${item.quality}p` : 'Source'} · {item.dub || item.audio || item.type || 'HLS'}</button>)}</div>}
